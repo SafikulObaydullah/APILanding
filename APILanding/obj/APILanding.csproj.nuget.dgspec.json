@@ -1,27 +1,26 @@
 {
   "format": 1,
   "restore": {
-    "D:\\APIProject\\iBos\\APILanding\\APILanding.csproj": {}
+    "D:\\APILanding\\APILanding\\APILanding.csproj": {}
   },
   "projects": {
-    "D:\\APIProject\\iBos\\APILanding\\APILanding.csproj": {
+    "D:\\APILanding\\APILanding\\APILanding.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\APIProject\\iBos\\APILanding\\APILanding.csproj",
+        "projectUniqueName": "D:\\APILanding\\APILanding\\APILanding.csproj",
         "projectName": "APILanding",
-        "projectPath": "D:\\APIProject\\iBos\\APILanding\\APILanding.csproj",
-        "packagesPath": "C:\\Users\\User\\.nuget\\packages\\",
-        "outputPath": "D:\\APIProject\\iBos\\APILanding\\obj\\",
+        "projectPath": "D:\\APILanding\\APILanding\\APILanding.csproj",
+        "packagesPath": "C:\\Users\\obayd\\.nuget\\packages\\",
+        "outputPath": "D:\\APILanding\\APILanding\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "C:\\Users\\User\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Users\\obayd\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
           "net7.0"
         ],
         "sources": {
-          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
