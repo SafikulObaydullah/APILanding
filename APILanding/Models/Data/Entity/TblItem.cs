@@ -9,7 +9,7 @@ public partial class TblItem
 
     public string? StrItemName { get; set; }
 
-    public long? NumStockQuantity { get; set; }
+    public long NumStockQuantity { get; set; }
 
     public bool? IsActive { get; set; }
 }

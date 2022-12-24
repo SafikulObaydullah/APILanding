@@ -14,7 +14,7 @@ namespace APILanding.Controllers
    [ApiController]
    public class ProductDeliveryController : ControllerBase
    {
-      private readonly ModelDbContext _context;
+      private readonly ModelDbContext _context; 
       public ProductDeliveryController(ModelDbContext context)
       {
          this._context = context;
@@ -62,7 +62,7 @@ namespace APILanding.Controllers
       [Route("CreateListofItem")]
       public IActionResult CreateListofItem(List<TblItem> obj)
       {
-         string msg = "";
+         string msg = string.Empty;
          try
          {
             bool isExit = false;
@@ -74,40 +74,38 @@ namespace APILanding.Controllers
             {
                foreach (var item in obj)
                {
-                  var existdata = _context.TblItems.Where(x => x.StrItemName.ToLower() == item.StrItemName.ToLower()).FirstOrDefault();
-                  
-
-                  
-                  if (existdata != null)
-                  {
-                     //throw new Exception($"{item.StrItemName} Items already Exists"); 
-                     isExit = true;
-                     break;
-                  }
-                  else
-                  {
+						
                      if (item.IntItemId == 0)
-                     {
-                        TblItem tblItem = new TblItem()
+							{
+								var existdata = _context.TblItems.Where(x => x.StrItemName.ToLower() == item.StrItemName.ToLower()).FirstOrDefault();
+
+								if (existdata != null)
+								{
+									//throw new Exception($"{item.StrItemName} Items already Exists"); 
+									isExit = true;
+									break;
+								}
+								TblItem tblItem = new TblItem()
                         {
                            StrItemName = item.StrItemName,
                            NumStockQuantity = item.NumStockQuantity,
+                           
                            IsActive = item.IsActive
                         };
                         itemlist.Add(tblItem); 
                      }
                      else
                      {
-                        var updata = _context.TblItems.Where(x => x.StrItemName.ToLower() == obj.Select(a => a.StrItemName.ToLower()).FirstOrDefault()).Count();
-                        if (updata > 0) throw new Exception($"{item.StrItemName}Items already Exists");
+                     var updata = _context.TblItems.Where(x => x.IntItemId != item.IntItemId && x.StrItemName.ToLower() == item.StrItemName.ToLower()).ToList().Count();
+
+                     if (updata > 0) throw new Exception("Items already Exists");
                         TblItem tbl = _context.TblItems.Where(x => x.IntItemId == item.IntItemId).FirstOrDefault();
                         tbl.StrItemName = item.StrItemName;
                         tbl.NumStockQuantity = item.NumStockQuantity;
                         tbl.IsActive = item.IsActive;
-
                         updatelist.Add(tbl);
                      }
-                  }
+                  
                }
                if(isExit == false)
                {
@@ -126,9 +124,12 @@ namespace APILanding.Controllers
                }
                else
                {
+                  msg = "Item Already Exist";
 
-                  return BadRequest(isExit);
-               }
+						//return BadRequest(isExit);
+						return BadRequest(msg);
+
+					}
 
             }
             else
@@ -150,30 +151,44 @@ namespace APILanding.Controllers
       #region =====  5# Purchase Some item from a supplier ====== 
       [HttpPost]
       [Route("PurchaseFromSupplier")]
-      public IActionResult PurchaseFromSupplier(PurchaseDetailsDTO obj)
+      public IActionResult PurchaseFromSupplier(List<PurchaseDetailsDTO> obj)
       {
          try
          {
-
-            TblPurchase tblPurchase = new TblPurchase()
+            foreach(var item in obj)
             {
-               IntSupplierId = obj.IntSupplierId,
-               DtePurchaseDate = obj.DtePurchaseDate,
-               IsActive = obj.IsActive
-            };
-            _context.TblPurchases.Add(tblPurchase);
-            _context.SaveChanges();
-            TblPurchaseDetail purchaseDetail = new TblPurchaseDetail()
-            {
-               IntItemId = obj.IntItemId,
-               IntPurchaseId = obj.IntPurchaseId,
-               NumItemQuantity = obj.NumItemQuantity,
-               NumUnitPrice = obj.NumUnitPrice,
-               IsActive = obj.IsActive
-            };
-            _context.Add(purchaseDetail);
-            _context.SaveChanges(); 
+               List<TblPurchase> tblPurchaseslist= new List<TblPurchase>();
 
+					TblPurchase tblPurchase = new TblPurchase()
+					{
+						IntSupplierId = item.IntSupplierId,
+						DtePurchaseDate = item.DtePurchaseDate,
+						IsActive = item.IsActive,
+					};
+					
+					//tblPurchaseslist.Add(tblPurchase);
+					_context.TblPurchases.Add(tblPurchase);
+					_context.SaveChanges();
+					long purchaseId = tblPurchase.IntPurchaseId;
+					if (purchaseId > 0)
+               {
+						List<TblPurchaseDetail> tblPurchaseDetailslist = new List<TblPurchaseDetail>();
+                  foreach(var detail in item.tblDetails)
+                  {
+							TblPurchaseDetail purchaseDetail = new TblPurchaseDetail()
+							{
+								 IntItemId = detail.IntItemId,
+								 IntPurchaseId = purchaseId,
+								 NumItemQuantity = detail.NumItemQuantity,
+								 NumUnitPrice = detail.NumUnitPrice,
+								 IsActive = detail.IsActive
+							};
+							tblPurchaseDetailslist.Add(purchaseDetail);
+						}
+						_context.TblPurchaseDetails.AddRange(tblPurchaseDetailslist);
+						_context.SaveChanges();
+					} 
+				}
          }
          catch (Exception ex)
          {
@@ -198,15 +213,28 @@ namespace APILanding.Controllers
             };
             _context.TblSales.Add(tblsale);
             _context.SaveChanges();
-            TblSalesDetail tblSalesDetail = new TblSalesDetail()
+            long OldQty = _context.TblItems.Where(x=>x.IntItemId == obj.IntItemId).Select(y=>y.NumStockQuantity).FirstOrDefault();
+            long? qty = 0;
+
+				if (OldQty > 0)
+				{
+                qty = OldQty - obj.NumItemQuantity;
+            }
+				TblItem itm = _context.TblItems.Where(x => x.IntItemId == obj.IntItemId).FirstOrDefault();
+            //itm.NumStockQuantity = qty;
+            _context.TblItems.Update(itm);
+            _context.SaveChanges();
+				TblSalesDetail tblSalesDetail = new TblSalesDetail()
             {
                IntItemId = obj.IntItemId,
+               
                IntSalesId = obj.IntSalesId,
                NumItemQuantity = obj.NumItemQuantity,
                NumUnitPrice = obj.NumUnitPrice,
                IsActive = obj.IsActive
             };
-            _context.Add(tblSalesDetail);
+            _context.TblSalesDetails.Add(tblSalesDetail);
+            
             _context.SaveChanges();
          }
          catch (Exception ex)
@@ -222,19 +250,18 @@ namespace APILanding.Controllers
       [Route("DailyPurchaseReport")]
       public IActionResult DailyPurchaseReport(DateTime dateTime)
       {
-         var data = from a in _context.TblPurchaseDetails
-                    join pur in _context.TblPurchases on a.IntPurchaseId equals pur.IntPurchaseId
-                    join itm in _context.TblItems on a.IntItemId equals itm.IntItemId
-                    where pur.DtePurchaseDate == dateTime
+         List< DailyPurchaseDTO> data = (from a in _context.TblPurchases
+						  join pur in _context.TblPurchaseDetails on a.IntPurchaseId equals pur.IntPurchaseId
+                    join itm in _context.TblItems on pur.IntItemId equals itm.IntItemId
+                    where a.DtePurchaseDate == dateTime
                     select new DailyPurchaseDTO
                     {
                      itemId = itm.IntItemId,
                      strItemName = itm.StrItemName,
-                     Quantity = a.NumItemQuantity,
-                     UnitPrice = a.NumUnitPrice,
+                     Quantity = pur.NumItemQuantity,
+                     UnitPrice = pur.NumUnitPrice,
                      TotalPurchase = _context.TblPurchaseDetails.Where(x=>x.IsActive==true).Select(p=>p.NumItemQuantity * p.NumUnitPrice).Sum(),
-                     
-                     };
+                     }).ToList();
          return Ok(data);
       }
       #endregion =========================
@@ -285,16 +312,40 @@ namespace APILanding.Controllers
                       TotalSales = _context.TblSalesDetails.Where(s=>s.IsActive == true).Select(ss=>ss.NumItemQuantity * ss.NumUnitPrice).Sum(),   
                       
                    }).ToList();
-         // List<PurchaseSalseDTO> list = new List<PurchaseSalseDTO>();
-         //List<TblPurchase> data = (from p in _context.TblPurchases
-         //                          where p.DtePurchaseDate == DayTime
-         //                          select p).ToList();
+         List<PurchaseSalseDetailsDTO> list = new List<PurchaseSalseDetailsDTO>();
+         List<PurchaseDetailsDTO> purchaseList = (from p in _context.TblPurchases
+                                                   join purd in _context.TblPurchaseDetails on p.IntPurchaseId equals purd.IntPurchaseId
+                                                   where p.DtePurchaseDate == DayTime
+                                                   select new PurchaseDetailsDTO()
+                                                   {
+                                                       // NumItemQuantity = purd.NumItemQuantity,
+																		//NumUnitPrice = purd.NumUnitPrice,
 
-         //List<TblSale> data1 = (from S in _context.TblSales
-         //                       where S.DteSalesDate == DayTime
-         //                       select S).ToList();
+																	}).ToList();
 
-         //data.AddRange(data1);
+			List<SalesDetailsDTO> salesList = (from S in _context.TblSales
+                                join sald in _context.TblSalesDetails on S.IntSalesId equals sald.IntSalesId
+                                where S.DteSalesDate == DayTime
+                                select new SalesDetailsDTO()
+                                {
+											  NumItemQuantity = sald.NumItemQuantity, 
+										  }).ToList();
+
+         foreach(var purlist in purchaseList)
+         {
+            foreach(var sal in salesList)
+            {
+               new PurchaseSalseDetailsDTO()
+               {
+                  IntSupplierId = purlist.IntSupplierId,
+                  DtePurchaseDate = purlist.DtePurchaseDate,
+                   //PurchaseNumItemQuantity = purlist.NumItemQuantity,
+						//PurchaseNumUnitPrice = purlist.NumUnitPrice,
+
+					};
+
+				}
+         }
          return Ok(dt);
       }
       #endregion =========================
@@ -338,7 +389,8 @@ namespace APILanding.Controllers
 
          return Ok(result);
       }
-      #endregion =========================
+		#endregion =========================
 
-   }
+
+	}
 }
