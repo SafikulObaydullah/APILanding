@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.OpenApi.Writers;
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 
 namespace APILanding.Controllers
@@ -250,7 +252,7 @@ namespace APILanding.Controllers
       [Route("DailyPurchaseReport")]
       public IActionResult DailyPurchaseReport(DateTime dateTime)
       {
-         List< DailyPurchaseDTO> data = (from a in _context.TblPurchases
+         List<DailyPurchaseDTO> data = (from a in _context.TblPurchases
 						  join pur in _context.TblPurchaseDetails on a.IntPurchaseId equals pur.IntPurchaseId
                     join itm in _context.TblItems on pur.IntItemId equals itm.IntItemId
                     where a.DtePurchaseDate == dateTime
@@ -293,34 +295,34 @@ namespace APILanding.Controllers
       [Route("DailywisePurchasevsSalesReport")]
       public IActionResult DailywisePurchasevsSalesReport(DateTime DayTime)
       {
-         List<DailywisePurchasevsSalesReportDTO> dt = (from a in _context.TblPurchaseDetails
+         //List<DailywisePurchasevsSalesReportDTO> dt = (from a in _context.TblPurchaseDetails
 
-                   join itm in _context.TblItems on a.IntItemId equals itm.IntItemId
-                   join pur in _context.TblPurchases on a.IntPurchaseId equals pur.IntPurchaseId
-                   //join salDet in _context.TblSalesDetails on a.IntItemId equals salDet.IntItemId
-                   //join sal in _context.TblSales on salDet.IntSalesId equals sal.IntSalesId
-                   where a.IsActive == true && pur.DtePurchaseDate == DayTime
-                   select new DailywisePurchasevsSalesReportDTO()
-                   {
-                      ItemId= a.IntItemId,   
-                      strItemName = itm.StrItemName,
-                      PurchaseQuantity= a.NumItemQuantity,
-                      PurchasePrice = a.NumUnitPrice,
-                      //SalesQuantity = salDet.NumItemQuantity,
-                      //SalesPrice = salDet.NumUnitPrice,
-                      TotalPurchase = _context.TblPurchaseDetails.Where(x => x.IsActive == true).Select(p => p.NumItemQuantity * p.NumUnitPrice).Sum(),
-                      TotalSales = _context.TblSalesDetails.Where(s=>s.IsActive == true).Select(ss=>ss.NumItemQuantity * ss.NumUnitPrice).Sum(),   
+         //          join itm in _context.TblItems on a.IntItemId equals itm.IntItemId
+         //          join pur in _context.TblPurchases on a.IntPurchaseId equals pur.IntPurchaseId
+         //          //join salDet in _context.TblSalesDetails on a.IntItemId equals salDet.IntItemId
+         //          //join sal in _context.TblSales on salDet.IntSalesId equals sal.IntSalesId
+         //          where a.IsActive == true && pur.DtePurchaseDate == DayTime
+         //          select new DailywisePurchasevsSalesReportDTO()
+         //          {
+         //             ItemId= a.IntItemId,   
+         //             strItemName = itm.StrItemName,
+         //             PurchaseQuantity= a.NumItemQuantity,
+         //             PurchasePrice = a.NumUnitPrice,
+         //             //SalesQuantity = salDet.NumItemQuantity,
+         //             //SalesPrice = salDet.NumUnitPrice,
+         //             TotalPurchase = _context.TblPurchaseDetails.Where(x => x.IsActive == true).Select(p => p.NumItemQuantity * p.NumUnitPrice).Sum(),
+         //             TotalSales = _context.TblSalesDetails.Where(s=>s.IsActive == true).Select(ss=>ss.NumItemQuantity * ss.NumUnitPrice).Sum(),   
                       
-                   }).ToList();
-         List<PurchaseSalseDetailsDTO> list = new List<PurchaseSalseDetailsDTO>();
+         //          }).ToList();
+         
          List<PurchaseDetailsDTO> purchaseList = (from p in _context.TblPurchases
                                                    join purd in _context.TblPurchaseDetails on p.IntPurchaseId equals purd.IntPurchaseId
                                                    where p.DtePurchaseDate == DayTime
                                                    select new PurchaseDetailsDTO()
                                                    {
-                                                       // NumItemQuantity = purd.NumItemQuantity,
-																		//NumUnitPrice = purd.NumUnitPrice,
-
+																		 tblDetails = (from a in _context.TblPurchaseDetails
+                                                                     where a.IsActive == true
+                                                                     select a).ToList()
 																	}).ToList();
 
 			List<SalesDetailsDTO> salesList = (from S in _context.TblSales
@@ -328,25 +330,37 @@ namespace APILanding.Controllers
                                 where S.DteSalesDate == DayTime
                                 select new SalesDetailsDTO()
                                 {
-											  NumItemQuantity = sald.NumItemQuantity, 
-										  }).ToList();
+											  NumItemQuantity = sald.NumItemQuantity,
+											  NumUnitPrice = sald.NumUnitPrice,
+                                }).ToList();
+			//var datalist = purchaseList.Join(
+			//                                 salesList,
+			//                                 x => x.IntSupplierId,
+			//                                 y => y.IntCustomerId,
+			//                                 (x, y) => new
+			//                                 {
+			//                                    IntSupplierId = x.IntSupplierId,
+			//                                    IntCustomerId = y.IntCustomerId
+			//                                 });
+			var datalist = purchaseList.Join(
+														salesList,
+														x => x.tblDetails.Select(o=>o.NumUnitPrice).FirstOrDefault(),
+														y => y.IntCustomerId,
+														(x, y) => new
+														{
+															IntSupplierId = x.IntSupplierId,
+															IntCustomerId = y.IntCustomerId
+														});
+			//List<PurchaseSalseDetailsDTO> list = new List<PurchaseSalseDetailsDTO>();
+			//foreach (var res in datalist)
+			//      {
+			//	PurchaseSalseDetailsDTO pursalesList = new PurchaseSalseDetailsDTO()
+			//         {
+			//		PurchaseNumItemQuantity = 
+			//	}
 
-         foreach(var purlist in purchaseList)
-         {
-            foreach(var sal in salesList)
-            {
-               new PurchaseSalseDetailsDTO()
-               {
-                  IntSupplierId = purlist.IntSupplierId,
-                  DtePurchaseDate = purlist.DtePurchaseDate,
-                   //PurchaseNumItemQuantity = purlist.NumItemQuantity,
-						//PurchaseNumUnitPrice = purlist.NumUnitPrice,
-
-					};
-
-				}
-         }
-         return Ok(dt);
+			//}
+			return Ok(datalist);
       }
       #endregion =========================
 
