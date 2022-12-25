@@ -7,5 +7,8 @@
       public long? Quantity { get; set; }
       public long? UnitPrice { get; set;}
       public long? TotalPurchase { get; set; }
+      public long? TotalStockQuantity { get; set; }
+      public long? OldItemStockQuantity { get; set; }
+
    }
 }
