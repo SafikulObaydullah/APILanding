@@ -148,7 +148,61 @@ namespace APILanding.Controllers
       }
       #endregion =========================
 
+      [HttpGet]
+      [Route("DailywisePurchasevsSalesReport")]
 
+      public IActionResult Dailywise(DateTime DayTime)
+      {
+         //List<PurchaseDtlDTO>? purchaseList = (from a in _context.TblPurchases
+         //                                    join pur in _context.TblPurchaseDetails on a.IntPurchaseId equals pur.IntPurchaseId
+         //                                    //join itm in _context.TblItems on pur.IntItemId equals itm.IntItemId
+         //                                    where a.DtePurchaseDate == DayTime 
+         //                                    //&& itm.IntItemId == pur.IntItemId
+         //                                    select pur.NumItemQuantity).FirstOrDefault();
+
+         return Ok();
+      }
+      //public IActionResult DailywisePurchasevsSalesReport(DateTime DayTime)
+      //{
+      //   List<PurchaseDetailsDTO> purchaseList = (from a in _context.TblPurchases
+                                                  
+      //                                    where a.IsActive == true
+      //                                    && a.DtePurchaseDate== DayTime
+      //                                    select new PurchaseDetailsDTO()
+      //                                    {
+      //                                       IntSupplierId = a.IntSupplierId,
+      //                                       tblDetails = (from pur in _context.TblPurchaseDetails
+      //                                                     join itm in _context.TblItems on pur.IntItemId equals itm.IntItemId
+      //                                                     where pur.IsActive == true && itm.IntItemId == pur.IntItemId
+                                                           
+      //                                                     select new PurchaseDtlDTO()
+      //                                                     {
+      //                                                        NumItemQuantity = pur.NumItemQuantity,
+      //                                                        NumUnitPrice = pur.NumUnitPrice,
+      //                                                     }).ToList(),
+
+      //                                    }).ToList();
+      //      List<SalesDetailsDTO> salesList = (from S in _context.TblSales
+                                               
+      //                                         join sald in _context.TblSalesDetails on S.IntSalesId equals sald.IntSalesId
+      //                                         join itms in _context.TblItems on sald.IntItemId equals itms.IntItemId
+      //                                         where S.DteSalesDate == DayTime 
+      //                                         && itms.IntItemId == sald.IntItemId
+
+      //                                         select new SalesDetailsDTO()
+      //                                         {
+      //                                            NumItemQuantity = sald.NumItemQuantity,
+      //                                            NumUnitPrice = sald.NumUnitPrice,
+      //                                         }).ToList();
+
+      //   var datalist = purchaseList.Join(
+      //                                   salesList,
+      //                                   a=>a.IntSupplierId,
+      //                                   b=>b.IntCustomerId,
+      //                                   (a,b)=> new {a.IntSupplierId,b.NumItemQuantity}).ToList();
+
+      //   return Ok(datalist);
+      //}
 
       #region =====  5# Purchase Some item from a supplier ====== 
       [HttpPost]
