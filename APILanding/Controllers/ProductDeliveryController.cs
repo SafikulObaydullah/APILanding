@@ -8,6 +8,7 @@ using Microsoft.OpenApi.Writers;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Numerics;
 using System.Runtime.InteropServices;
 
 namespace APILanding.Controllers
@@ -151,16 +152,41 @@ namespace APILanding.Controllers
       [HttpGet]
       [Route("DailywisePurchasevsSalesReport")]
 
-      public IActionResult Dailywise(DateTime DayTime)
+      public IActionResult DailywisePurchasevsSalesReport(DateTime DayTime)
       {
-         //List<PurchaseDtlDTO>? purchaseList = (from a in _context.TblPurchases
-         //                                    join pur in _context.TblPurchaseDetails on a.IntPurchaseId equals pur.IntPurchaseId
-         //                                    //join itm in _context.TblItems on pur.IntItemId equals itm.IntItemId
-         //                                    where a.DtePurchaseDate == DayTime 
-         //                                    //&& itm.IntItemId == pur.IntItemId
-         //                                    select pur.NumItemQuantity).FirstOrDefault();
+         List< PurchaseDtlDTO> purchaseList = (from a in _context.TblPurchases
+                                                 join pur in _context.TblPurchaseDetails on a.IntPurchaseId equals pur.IntPurchaseId
+                                                 join itm in _context.TblItems on pur.IntItemId equals itm.IntItemId
+                                              where a.DtePurchaseDate.ToString() == DayTime.ToShortDateString()
+                                              && itm.IntItemId == 1
+                                              select new PurchaseDtlDTO()
+                                              {
+																 StrItemName = itm.StrItemName,
+																 NumItemQuantity = pur.NumItemQuantity,
+																 NumUnitPrice = pur.NumUnitPrice,
+                                              }).ToList();
+			List<SalesDetailsDTO> salesList = (from a in _context.TblSales
+									  join sal in _context.TblSalesDetails on a.IntSalesId equals sal.IntSalesId
+									  join itm in _context.TblItems on sal.IntItemId equals itm.IntItemId
+									  where a.DteSalesDate.ToString() == DayTime.ToShortDateString()
+									  && itm.IntItemId == 1
+									  select new SalesDetailsDTO()
+									  {
+										  //NumItemQuantity = sal.NumItemQuantity,
+										  NumUnitPrice = sal.NumUnitPrice,
+									  }).ToList();
 
-         return Ok();
+		//	var results = workOrders.Join(plans,
+  //wo => wo.WorkOrderNumber,
+  //p => p.WorkOrderNumber,
+  //(order, plan) => new { order.WorkOrderNumber, order.WorkDescription, plan.ScheduledDate }
+        var results = purchaseList.Join(salesList,
+                           p=>p.IntItemId,
+                           s=>s.IntItemId,
+                           (pur,sal) => new {pur.NumItemQuantity,pur.NumUnitPrice,sal.IntItemId}
+);
+
+			return Ok(results);
       }
       //public IActionResult DailywisePurchasevsSalesReport(DateTime DayTime)
       //{

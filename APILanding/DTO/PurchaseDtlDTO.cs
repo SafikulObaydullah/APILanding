@@ -11,7 +11,8 @@
       public long? NumItemQuantity { get; set; }
 
       public long? NumUnitPrice { get; set; }
+		public string? StrItemName { get; set; }
 
-      public bool? IsActive { get; set; }
+		public bool? IsActive { get; set; }
    }
 }
