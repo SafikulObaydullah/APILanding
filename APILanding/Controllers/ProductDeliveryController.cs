@@ -492,7 +492,7 @@ namespace APILanding.Controllers
 
          var result = new LandingReportDTO
          {
-            Month = CultureInfo.CurrentCulture.DateTimeFormat.GetAbbreviatedMonthName(Convert.ToInt32(Month)),
+            //Month = CultureInfo.CurrentCulture.DateTimeFormat.GetAbbreviatedMonthName(Convert.ToInt32(Month)),
             Year = Year,
             TotalPurchaseAmount = totalPurchase,
             TotalSalesAmount = totalSales,
