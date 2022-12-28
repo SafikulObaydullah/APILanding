@@ -4,11 +4,13 @@ using APILanding.Models.Data.Entity;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Writers;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics.Metrics;
+using System.Drawing;
 using System.Globalization;
 using System.Numerics;
 using System.Runtime.InteropServices;
@@ -45,6 +47,7 @@ namespace APILanding.Controllers
          }
          return Ok();
       }
+      #endregion
       #region ===== 2# Create some customer and supplier [Single] ====== 
       [HttpPost]
       [Route("CreatePartner")]
@@ -56,19 +59,20 @@ namespace APILanding.Controllers
             IntPartnerTypeId = obj.IntPartnerTypeId,
             IsActive = obj.IsActive
          };
+         _context.TblPartners.Add(tblPartner);
+         _context.SaveChanges();
          return Ok(obj);
       }
       #endregion
-      #endregion
+      
 
       #region ===== 3# Create Some items [List of item, don’t allow duplicates] 4# Edit some items [List of item, don’t allow duplicates]======
 
       [HttpPost]
-      [Route("CreateListofItem")]
-      public IActionResult CreateListofItem(List<TblItem> obj)
+      [Route("CreateEditListofItem")]
+      public IActionResult CreateEditListofItem(List<TblItem> obj)
       {
-         string msg = string.Empty;
-         //MessageHelper response = new MessageHelper();   
+         string msg = string.Empty;   
          try
          {
             bool isExit = false;
@@ -85,49 +89,47 @@ namespace APILanding.Controllers
                {
 						
                      if (item.IntItemId == 0)
-							{
-                        /// loop use 
+							{ 
 								var existdata = _context.TblItems.Where(x => x.StrItemName.ToLower() == item.StrItemName.ToLower()).FirstOrDefault();
-                        
-                        count++;
-                     
-                        duplicate.Add(existdata);
-                        
-                        if (existdata != null)
-								{
-									//throw new Exception($"{item.StrItemName} Items already Exists"); 
-									isExit = true;
-                           continue;
-								}
-								TblItem tblItem = new TblItem()
+                        if(existdata == null)
                         {
-                           StrItemName = item.StrItemName,
-                           NumStockQuantity = item.NumStockQuantity,
-                           IsActive = item.IsActive
-                        };
-                        itemlist.Add(tblItem); 
+                           TblItem tblItem = new TblItem()
+                           {
+                              StrItemName = item.StrItemName,
+                              NumStockQuantity = item.NumStockQuantity,
+                              IsActive = item.IsActive
+                           };
+                           itemlist.Add(tblItem);
+                        }
+                        else
+                        {
+                           count++;
+                           duplicate.Add(existdata);
+                           isExit = true;
+                           continue;
+                        }
                      }
                      else
                      {
-                     var updata = _context.TblItems.Where(x => x.IntItemId != item.IntItemId && x.StrItemName.ToLower() == item.StrItemName.ToLower()).ToList().Count();
+                        var updata = _context.TblItems.Where(x => x.IntItemId != item.IntItemId && x.StrItemName.ToLower() == item.StrItemName.ToLower()).ToList().Count();
 
-                     if (updata > 0) throw new Exception("Items already Exists");
+                        if (updata > 0) return BadRequest("Items Already Exists"); //throw new Exception("Items already Exists");
                         TblItem tbl = _context.TblItems.Where(x => x.IntItemId == item.IntItemId).FirstOrDefault();
                         tbl.StrItemName = item.StrItemName;
                         tbl.NumStockQuantity = item.NumStockQuantity;
                         tbl.IsActive = item.IsActive;
                         updatelist.Add(tbl);
                      }
-                  
                }
-               msg = msg  + "Total Exists Count: " + count.ToString();
-               duplicate.ForEach(x =>
+               if(isExit==true)
                {
-                  msg =  msg + " " + x.StrItemName + ",";
-               });
-               msg = msg.Remove(msg.Length - 1, 1);
-
-
+                  msg = msg + "Total Exists Count: " + count.ToString();
+                  duplicate.ForEach(x =>
+                  {
+                     msg = msg + " " + x.StrItemName + ",";
+                  });
+                  msg = msg.Remove(msg.Length - 1, 1);
+               }
                if (isExit == false)
                {
                   if (itemlist.Count() > 0)
@@ -135,52 +137,163 @@ namespace APILanding.Controllers
                      _context.TblItems.AddRange(itemlist);
                      _context.SaveChanges();
                   }
-
                   if (updatelist.Count() > 0)
                   {
                      _context.TblItems.UpdateRange(updatelist);
                      _context.SaveChanges();
-                  }  
-                  return Ok("Created Successfully"); 
+                  }
+                  return Ok("Created Successfully");
                }
                else
                {
-                  
                   foreach(var dup in duplicate)
                   {
                      //msg = $"{count} {dup.StrItemName} Items Already Exist";
                      MessageHelper response = new MessageHelper()
                      {
                         Name = dup.StrItemName,
-                        //Count = count,
                         Message = "Items Already Exists",
                      };
                      list.Add(response);
                   }
                   //return BadRequest(isExit);
+                  //return BadRequest(msg);
                   return BadRequest(msg);
-					}
+                  
+               }
 
             }
             else
             {
-               return BadRequest();
+               return BadRequest(msg);
             }
 
             //return msg;
          }
          catch (Exception ex)
          {
-            throw ex;
+            return BadRequest(ex.Message);
          } 
       }
-      #endregion =========================
+      /// <summary>
+      /// 
+      /// </summary>
+      /// <param CreateListofItemWithDuplicateCheck="obj"></param>
+      /// <returns></returns>
+      /// 
+      [HttpPost]
+      [Route("CreateListofItem")]
+      public async Task<MessageHelper> CreateListofItem(List<TblItem> obj)
+      {
+         try
+         {
+            string msg = "";
+            long count = 0;
+            List<TblItem> createlist = new List<TblItem>();
+            List<string> duplicateItems = new List<string>();
+            foreach(var item in obj)
+            {
+               TblItem? tblItem = await _context.TblItems.Where(x=>x.StrItemName.ToLower() == item.StrItemName.ToLower() 
+               && x.IsActive==true).FirstOrDefaultAsync();   
+               if (tblItem == null)
+               {
+                   createlist.Add(new TblItem()
+                   {
+                      StrItemName = item.StrItemName,
+                      NumStockQuantity = item.NumStockQuantity,
+                      IsActive = true,
+                   });
+               }
+               else
+               {
+                  duplicateItems.Add(tblItem.StrItemName);
+               }
+            } 
+            if(duplicateItems.Count()>0)
+            {
 
-     
+               throw new Exception($"Duplicate found: {string.Join(",", duplicateItems)}");
+               msg = msg + "Total Exists Count: " + count.ToString();
+               ////duplicateItems.ForEach(x =>
+               ////{
+               ////   msg = msg + " " + x.Str + ",";
+               ////});
+               //msg = msg.Remove(msg.Length - 1, 1);
+            }
+            else
+            {
+               await _context.TblItems.AddRangeAsync(obj);
+               await _context.SaveChangesAsync();
+               return new MessageHelper()
+               {
+                  Message = "Successfully Saved"
+               };
+            }
+         }
+         catch(Exception ex)
+         {
+            return new MessageHelper()
+            {
+               Message = ex.Message,
+            };
+         }
+      }
+      #endregion =========================
+      #region =================#4 Edit List of ITems AND Duplicate Check  ========================
+      public async Task<MessageHelper> EditListItemFinal(List<TblItem> itemList)
+      {
+         try
+         {
+            List<TblItem> editList = new List<TblItem>();
+            List<string> duplicateItems = new List<string>();
+            foreach (var item in itemList)
+            {
+               TblItem? tblItem = await _context.TblItems.Where(x => x.IntItemId != item.IntItemId &&
+               x.StrItemName.ToLower() == item.StrItemName.ToLower() && x.IsActive == true).FirstOrDefaultAsync();
+
+               if (tblItem == null)
+               {
+                  TblItem? updateItem = await _context.TblItems.Where(x => x.IntItemId == item.IntItemId && x.IsActive == true).FirstOrDefaultAsync();
+
+                  if (updateItem != null)
+                  {
+                     updateItem.StrItemName = item.StrItemName;
+                     updateItem.NumStockQuantity = item.NumStockQuantity;
+                     editList.Add(updateItem);
+                  }
+               }
+               else
+               {
+                  duplicateItems.Add(tblItem.StrItemName);
+               }
+            }
+
+            if (duplicateItems.Count() > 0)
+            {
+               throw new Exception($"Duplicate found: {string.Join(", ", duplicateItems)}");
+            }
+            else
+            {
+               _context.TblItems.UpdateRange(editList);
+               await _context.SaveChangesAsync();
+
+               return new MessageHelper()
+               {
+                  Message = "Success"
+               };
+            }
+         }
+         catch (Exception)
+         {
+            throw;
+         }
+      }
+      #endregion======================================
+
       //public IActionResult DailywisePurchasevsSalesReport(DateTime DayTime)
       //{
       //   List<PurchaseDetailsDTO> purchaseList = (from a in _context.TblPurchases
-                                                  
+
       //                                    where a.IsActive == true
       //                                    && a.DtePurchaseDate== DayTime
       //                                    select new PurchaseDetailsDTO()
@@ -189,7 +302,7 @@ namespace APILanding.Controllers
       //                                       tblDetails = (from pur in _context.TblPurchaseDetails
       //                                                     join itm in _context.TblItems on pur.IntItemId equals itm.IntItemId
       //                                                     where pur.IsActive == true && itm.IntItemId == pur.IntItemId
-                                                           
+
       //                                                     select new PurchaseDtlDTO()
       //                                                     {
       //                                                        NumItemQuantity = pur.NumItemQuantity,
@@ -198,7 +311,7 @@ namespace APILanding.Controllers
 
       //                                    }).ToList();
       //      List<SalesDetailsDTO> salesList = (from S in _context.TblSales
-                                               
+
       //                                         join sald in _context.TblSalesDetails on S.IntSalesId equals sald.IntSalesId
       //                                         join itms in _context.TblItems on sald.IntItemId equals itms.IntItemId
       //                                         where S.DteSalesDate == DayTime 
@@ -277,38 +390,49 @@ namespace APILanding.Controllers
       #region ===== 6# Sale some item to a customer [ Check stock while selling items] ====== 
       [HttpPost]
       [Route("SaleToCustomer")]
-      public IActionResult SaleToCustomer(SalesDetailsDTO obj)
+      public IActionResult SaleToCustomer(SalesDetailsCommonDTO obj)
       {
          try
          {
-            long? OldQty = _context.TblItems.Where(x => x.IntItemId == obj.IntItemId).Select(y => y.NumStockQuantity).FirstOrDefault();
-            if(OldQty>0)
+
+            List<TblSale> tblPurchaseslist = new List<TblSale>();
+
+            TblSale tblSales = new TblSale()
             {
-               TblSale tblsale = new TblSale()
-               {
-                  IntCustomerId = obj.IntCustomerId,
-                  DteSalesDate = obj.DteSalesDate,
-                  IsActive = obj.IsActive
-               };
-               _context.TblSales.Add(tblsale);
-               _context.SaveChanges();
-            }   
-             long? qty = 0;
-               qty = OldQty - obj.NumItemQuantity;
-			      TblItem itm = _context.TblItems.Where(x => x.IntItemId == obj.IntItemId).FirstOrDefault();
-               _context.TblItems.Update(itm);
-               _context.SaveChanges();
-				TblSalesDetail tblSalesDetail = new TblSalesDetail()
-            {
-               IntItemId = obj.IntItemId,
-               
-               IntSalesId = obj.IntSalesId,
-               NumItemQuantity = obj.NumItemQuantity,
-               NumUnitPrice = obj.NumUnitPrice,
+               IntCustomerId = obj.IntCustomerId,
+               DteSalesDate = obj.DteSalesDate,
                IsActive = obj.IsActive
             };
-            _context.TblSalesDetails.Add(tblSalesDetail);
+            _context.TblSales.Add(tblSales);
             _context.SaveChanges();
+            long salesId = tblSales.IntSalesId;
+
+            List<TblItem> tblItemslist = new List<TblItem>();
+            foreach (var item in obj.SalesDetails)
+            {
+               if (salesId > 0)
+               {
+                  TblSalesDetail salesDetail = new TblSalesDetail()
+                  {
+                     IntItemId = item.IntItemId,
+                     IntSalesId = salesId,
+                     NumItemQuantity = item.NumItemQuantity,
+                     NumUnitPrice = item.NumUnitPrice,
+                     IsActive = item.IsActive
+                  };
+
+                  _context.TblSalesDetails.Add(salesDetail);
+                  _context.SaveChanges();
+               }
+               TblItem tbl = _context.TblItems.Where(x => x.IntItemId == item.IntItemId).FirstOrDefault();
+               tbl.NumStockQuantity = tbl.NumStockQuantity - item.NumItemQuantity;
+               tbl.IsActive = item.IsActive;
+               tblItemslist.Add(tbl);
+               _context.TblItems.UpdateRange(tblItemslist);
+               _context.SaveChanges();
+            }
+
+
          }
          catch (Exception ex)
          {
@@ -328,6 +452,7 @@ namespace APILanding.Controllers
                                         join pur in _context.TblPurchaseDetails on a.IntPurchaseId equals pur.IntPurchaseId
                                         join itm in _context.TblItems on pur.IntItemId equals itm.IntItemId
                                         where a.DtePurchaseDate.Value.Date == dateTime.Date && a.IsActive == true
+                                        && pur.IsActive== true
                                         select new DailyPurchaseDTO
                                         {
                                            itemId = itm.IntItemId,
@@ -346,18 +471,19 @@ namespace APILanding.Controllers
       [Route("MonthlyWiseSalesReport")]
       public IActionResult MonthlyWiseSalesReport(DateTime startDate,DateTime ToDate)
       {
-         var data = from a in _context.TblSalesDetails
-                    join pur in _context.TblSales on a.IntSalesId equals pur.IntSalesId
-                    join itm in _context.TblItems on a.IntItemId equals itm.IntItemId
-                    where (pur.DteSalesDate.Value.Month >= startDate.Month && pur.DteSalesDate.Value.Month <= ToDate.Month)
+         var data = from a in _context.TblSales
+                    join pur in _context.TblSalesDetails on a.IntSalesId equals pur.IntSalesId
+                    join itm in _context.TblItems on pur.IntItemId equals itm.IntItemId
+                    where (a.DteSalesDate >= startDate && a.DteSalesDate <= ToDate)
                     && pur.IsActive == true
                     select new MonthlyWiseSalesReportDTO
                     {
                        itemId = itm.IntItemId,
                        strItemName = itm.StrItemName,
-                       Quantity = a.NumItemQuantity,
-                       UnitPrice = a.NumUnitPrice,
-                       TotalPurchase = _context.TblPurchaseDetails.Where(x => x.IsActive == true).Select(p => p.NumItemQuantity * p.NumUnitPrice).Sum(),
+                       Quantity = _context.TblSalesDetails.Where(x=>x.IsActive == true).Select(y=>y.NumItemQuantity).Sum(),
+                       UnitPrice = pur.NumUnitPrice,
+                       TotalSalesAmount = _context.TblSalesDetails.Where(x => x.IsActive == true).Select(p => p.NumItemQuantity * p.NumUnitPrice).Sum(),
+                       TotalItemStockQuantity = _context.TblItems.Where(x=>x.IsActive==true).Select(y=>y.NumStockQuantity).Sum(),   
                     };
          long? count = data.Count();
          return Ok(data);
@@ -374,7 +500,7 @@ namespace APILanding.Controllers
                                               join pur in _context.TblPurchaseDetails on a.IntPurchaseId equals pur.IntPurchaseId
                                               join itm in _context.TblItems on pur.IntItemId equals itm.IntItemId
                                               where a.DtePurchaseDate.Value.Date == DayTime.Date 
-                                                    && a.IsActive == true && pur.IsActive == true
+                                              && a.IsActive == true && pur.IsActive == true
                                               select new PurchaseDtlDTO()
                                               {
                                                  IntDetailsId = pur.IntDetailsId,
@@ -471,34 +597,40 @@ namespace APILanding.Controllers
                               join p in _context.TblPurchaseDetails on ps.IntPurchaseId equals p.IntPurchaseId
                               where ps.IsActive == true && p.IsActive == true
                               && ps.DtePurchaseDate.Value.Month == Month
-                              && ps.DtePurchaseDate.Value.Year == Year
+                              && ps.DtePurchaseDate.Value.Year == Year 
                               select p.NumItemQuantity * p.NumUnitPrice).Sum();
          var totalSales = (from ds in _context.TblSales
                            join s in _context.TblSalesDetails on ds.IntSalesId equals s.IntSalesId
-                           where ds.IsActive == true 
+                           where ds.IsActive == true && s.IsActive == true
                            && ds.DteSalesDate.Value.Month == Month
-                           && ds.DteSalesDate.Value.Month == Year
+                           && ds.DteSalesDate.Value.Year == Year
                            select s.NumItemQuantity * s.NumUnitPrice).Sum();
 
          string status = "";
+
          if (totalPurchase > totalSales)
          {
             status = "Item Sale is loss";
          }
-         else
+         else if(totalPurchase < totalSales)
          {
             status = "Item purchase is Profit";
          }
+         else
+         {
+            status = "Equals Sales and Purchase";
+         }
+
+         DateTime date = new DateTime(Year, Month, 1);
 
          var result = new LandingReportDTO
          {
-            //Month = CultureInfo.CurrentCulture.DateTimeFormat.GetAbbreviatedMonthName(Convert.ToInt32(Month)),
+            Month = date.ToString("MMMM"),
             Year = Year,
             TotalPurchaseAmount = totalPurchase,
             TotalSalesAmount = totalSales,
             Status = status
          };
-
          return Ok(result);
       }
 		#endregion 

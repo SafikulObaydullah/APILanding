@@ -6,6 +6,7 @@
       public string? strItemName { get; set; }
       public long? Quantity { get; set; }
       public long? UnitPrice { get; set; }
-      public long? TotalPurchase { get; set; }
+      public Decimal? TotalSalesAmount { get; set; }
+      public long? TotalItemStockQuantity { get; set; }
    }
 }
