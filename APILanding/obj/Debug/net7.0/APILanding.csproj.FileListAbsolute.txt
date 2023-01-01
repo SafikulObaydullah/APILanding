@@ -230,3 +230,7 @@ D:\APILanding\APILanding\bin\Debug\net7.0\Microsoft.AspNetCore.JsonPatch.dll
 D:\APILanding\APILanding\bin\Debug\net7.0\Microsoft.AspNetCore.Mvc.NewtonsoftJson.dll
 D:\APILanding\APILanding\bin\Debug\net7.0\Newtonsoft.Json.dll
 D:\APILanding\APILanding\bin\Debug\net7.0\Newtonsoft.Json.Bson.dll
+D:\APIProject\hw\APILanding\APILanding\bin\Debug\net7.0\Microsoft.AspNetCore.JsonPatch.dll
+D:\APIProject\hw\APILanding\APILanding\bin\Debug\net7.0\Microsoft.AspNetCore.Mvc.NewtonsoftJson.dll
+D:\APIProject\hw\APILanding\APILanding\bin\Debug\net7.0\Newtonsoft.Json.dll
+D:\APIProject\hw\APILanding\APILanding\bin\Debug\net7.0\Newtonsoft.Json.Bson.dll
