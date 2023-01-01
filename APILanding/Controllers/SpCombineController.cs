@@ -123,7 +123,6 @@ namespace APILanding.Controllers
 				throw;
 			}
 		}
-		[HttpPost]
-		[Route("")]
+
 	}
 }
