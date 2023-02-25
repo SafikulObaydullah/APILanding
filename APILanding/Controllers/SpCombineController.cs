@@ -1,4 +1,5 @@
 ﻿using APILanding.Models.Data;
+using APILanding.ViewModel;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using Newtonsoft.Json;
@@ -123,6 +124,73 @@ namespace APILanding.Controllers
 				throw;
 			}
 		}
+
+		[HttpPost]
+		[Route("CreateEditItems")]
+		public async Task<IActionResult> CreateEditItems(CommonITemDTO obj)
+		{
+			dt = new DataTable();
+			try
+			{
+				using (var connection = new SqlConnection(con))
+				{
+					string sql = "dbo.sprCreatedEditItemofList";
+					using (SqlCommand sqlCmd = new SqlCommand(sql, connection))
+					{
+						sqlCmd.CommandType = CommandType.StoredProcedure;
+						//sqlCmd.Parameters.AddWithValue("@strPartName", obj.PartName);
+						string jsonString = System.Text.Json.JsonSerializer.Serialize(obj.itemList);
+						sqlCmd.Parameters.AddWithValue("@jsonString", jsonString);
+						connection.Open();
+						using (SqlDataAdapter sqlAdapter = new SqlDataAdapter(sqlCmd))
+						{
+							sqlAdapter.Fill(dt);
+						}
+						connection.Close();
+					}
+				}
+
+				return Ok(JsonConvert.SerializeObject(dt));
+			}
+			catch (Exception ex)
+			{
+				throw ex;
+			}
+		}
+
+		//[HttpPost]
+		//[Route("CreateEditItem")]
+		//public Task<IActionResult> CreateEditItem(CommonITemDTO obj)
+		//{
+		//	try
+		//	{
+		//		DataTable dt = new DataTable();
+		//		using (SqlConnection connection = new SqlConnection(con))
+		//		{
+		//			string sql = "dbo.sprCreatedEditItemofList";
+		//			using (SqlCommand sqlCmd = new SqlCommand(sql, connection))
+		//			{
+		//				sqlCmd.CommandType = CommandType.StoredProcedure;
+		//				sqlCmd.Parameters.AddWithValue("@strPartName", obj.PartName);
+		//				string jsonString = System.Text.Json.JsonSerializer.Serialize(obj.itemList);
+		//				sqlCmd.Parameters.AddWithValue("@jsonString", jsonString);
+		//				connection.Open();
+		//				using (SqlDataAdapter sqlAdapter = new SqlDataAdapter(sqlCmd))
+		//				{
+		//					sqlAdapter.Fill(dt);
+		//				}
+		//				connection.Close();
+		//			}
+
+		//		}
+
+		//	}
+		//	catch (Exception)
+		//	{
+		//		throw;
+		//	}
+
+		//}
 
 	}
 }
